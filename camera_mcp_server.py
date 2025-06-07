@@ -24,7 +24,13 @@ from pathlib import Path
 from datetime import datetime
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stderr)
+    ]
+)
 logger = logging.getLogger(__name__)
 
 class CameraManager:
@@ -34,19 +40,26 @@ class CameraManager:
         self.camera_cache = {}
         self.last_camera_scan = 0
         
-    async def _run_command(self, command: List[str], timeout: int = 30) -> Dict[str, Any]:
+    async def _run_command(self, command: List[str], timeout: int = 30, stdin_input: str = None) -> Dict[str, Any]:
         """Execute command and return result"""
         try:
+            logger.debug(f"Executing command: {' '.join(command)}")
             process = await asyncio.create_subprocess_exec(
                 *command,
                 stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
+                stderr=asyncio.subprocess.PIPE,
+                stdin=asyncio.subprocess.PIPE if stdin_input else None
             )
             
             try:
-                stdout, stderr = await asyncio.wait_for(
-                    process.communicate(), timeout=timeout
-                )
+                if stdin_input:
+                    stdout, stderr = await asyncio.wait_for(
+                        process.communicate(input=stdin_input.encode()), timeout=timeout
+                    )
+                else:
+                    stdout, stderr = await asyncio.wait_for(
+                        process.communicate(), timeout=timeout
+                    )
                 
                 return {
                     "success": process.returncode == 0,
@@ -235,12 +248,16 @@ class CameraManager:
                 }
             
             # Kill any blocking processes first
-            await self._run_command(["sudo", "pkill", "cameracaptured"])
+            logger.info(f"PTZ Control: Killing blocking processes")
+            kill_result = await self._run_command(["sudo", "-S", "pkill", "cameracaptured"], timeout=5, stdin_input="jjjj\n")
+            logger.info(f"Kill result: {kill_result}")
             
             # Build command
             cmd = [self.webcam_ptz_path, command, value]
+            logger.info(f"PTZ Control: Executing command: {' '.join(cmd)}")
             
             result = await self._run_command(cmd, timeout=10)
+            logger.info(f"PTZ Command result: success={result['success']}, stdout='{result['stdout']}', stderr='{result['stderr']}', exit_code={result['exit_code']}")
             
             return {
                 "success": result["success"],

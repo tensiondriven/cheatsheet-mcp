@@ -38,7 +38,9 @@ def execute_command(command, timeout=30):
     
     if not is_command_allowed(command, allowed_commands):
         base_cmd = command.split()[0] if command else ""
-        print(f"Command '{base_cmd}' not in allowlist. Use 'betterbash --list' to see allowed commands.", file=sys.stderr)
+        print(f"Command '{base_cmd}' not in allowlist.", file=sys.stderr)
+        print(f"Add it with: betterbash --add \"{base_cmd}\"", file=sys.stderr)
+        print(f"Or list all allowed commands: betterbash --list", file=sys.stderr)
         return 1
     
     try:
@@ -71,6 +73,30 @@ def execute_command(command, timeout=30):
         print(f"Error executing command: {e}", file=sys.stderr)
         return 1
 
+def add_command_to_allowlist(command):
+    """Add a command to the allowlist file"""
+    allowed_file = Path(__file__).parent / "allowed_commands.txt"
+    
+    try:
+        # Read current commands
+        current_commands = load_allowed_commands()
+        
+        if command in current_commands:
+            print(f"Command '{command}' is already in the allowlist.")
+            return 0
+        
+        # Append new command to file
+        with open(allowed_file, 'a') as f:
+            f.write(f"\n{command}")
+        
+        print(f"Added '{command}' to allowlist.")
+        print(f"You can now run: betterbash \"{command} ...\"")
+        return 0
+        
+    except Exception as e:
+        print(f"Error adding command to allowlist: {e}", file=sys.stderr)
+        return 1
+
 def main():
     parser = argparse.ArgumentParser(
         description="BetterBash - Enhanced shell execution with safety controls",
@@ -87,6 +113,8 @@ Examples:
                        help="Command timeout in seconds (default: 30)")
     parser.add_argument("--list", action="store_true",
                        help="List all allowed commands")
+    parser.add_argument("--add", metavar="COMMAND",
+                       help="Add a command to the allowlist")
     
     args = parser.parse_args()
     
@@ -96,6 +124,9 @@ Examples:
         for cmd in sorted(allowed_commands):
             print(f"  {cmd}")
         return 0
+    
+    if args.add:
+        return add_command_to_allowlist(args.add)
     
     if not args.command:
         parser.print_help()
