@@ -18,7 +18,7 @@ CASH is designed to be the **lowest-friction shell execution method** for any MC
 
 ## Files
 
-- **`cash_server.py`** - Main MCP server implementation
+- **`betterbash_server.py`** - Main MCP server implementation
 - **`allowed_commands.txt`** - Safety allowlist of permitted commands  
 - **`MCP_SETUP_INSTRUCTIONS.md`** - Configuration and usage guide
 
@@ -31,7 +31,7 @@ Add to Claude Code MCP configuration:
   "name": "cash",
   "type": "server", 
   "command": "python3",
-  "args": ["/Users/j/Code/mcp/cash_server.py"],
+  "args": ["/Users/j/Code/mcp/betterbash_server.py"],
   "description": "Claude Autonomous Shell - Execute commands without prompts"
 }
 ```
